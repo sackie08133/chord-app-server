@@ -1,5 +1,7 @@
 import Database from 'better-sqlite3'
-const db = new Database('db.js')
+const db = new Database('database.db')
+
+db.pragma(`journal_mode = WAL`)
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -17,5 +19,7 @@ db.exec(`
         last_edited TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`)
+
+
 
 export default db
