@@ -10,13 +10,7 @@ const PORT = 3001
 app.use(cors()) // allows the react app running on port 5731 to also allow other ports to communicate with the backend, on port 3001
 app.use(express.json())
 
-app.get('/', (req, res) => { // get response on root file name, (request, response)
-    res.send("Server is working")
-}) 
 
-app.listen(PORT, () => { 
-    console.log(`Server running on http:localhost:${PORT}`)
-})
 
 // function to confirm if / which user is making a database request
 function requireAuth(req,res,next) {
@@ -118,10 +112,9 @@ app.post('/delete', requireAuth, (req,res) => {
     }
 })
 
-// get all songs
 app.get('/songs', requireAuth, (req, res) => {
     try {
-        const list = db.prepare(`SELECT * FROM songs WHERE id = ?`).all(req.userId)
+        const songs = db.prepare(`SELECT * FROM songs WHERE user_id = ?`).all(req.userId)
         res.status(200).json(songs)
     } catch (error) {
         res.status(500).json({message:'error'})
@@ -149,6 +142,18 @@ app.put('/songs/:id', requireAuth, (req,res) => {
     } catch (error) {
         res.status(500).json({message: 'update failed'})
     }
+})
+
+app.get('/songs/:id', requireAuth, (req,res) => {
+    const songId = req.params.id
+    const song = db.prepare(`SELECT * FROM songs WHERE id = ?`).get(songId)
+    if (!song) {
+        return res.status(404).json({message:'song not found'})
+    }
+    if (song.user_id !== req.userId) {
+        return res.status (403).json({message:`you do not own this song`})
+    }
+    res.status(200).json(song)
 })
 
 
