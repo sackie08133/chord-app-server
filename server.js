@@ -10,7 +10,9 @@ const PORT = 3001
 app.use(cors()) // allows the react app running on port 5731 to also allow other ports to communicate with the backend, on port 3001
 app.use(express.json())
 
-
+app.listen(PORT, () => {  // required
+    console.log(`Server running on http:localhost:${PORT}`)
+})
 
 // function to confirm if / which user is making a database request
 function requireAuth(req,res,next) {
@@ -154,6 +156,50 @@ app.get('/songs/:id', requireAuth, (req,res) => {
         return res.status (403).json({message:`you do not own this song`})
     }
     res.status(200).json(song)
+})
+
+app.post('/notes', requireAuth, (req,res) => {
+    // notes: [{octave, row, col}, {octave, row, col}]
+    const {song_id, instrument, notes} = req.body 
+    const song = db.prepare(`SELECT * FROM songs WHERE id = ?`).get(song_id)
+
+    if (!song) { // needs to come first before ownership check, ownership check uses song.user_id
+        return res.status(404).json({message: "song not found"})
+    } 
+
+    if (req.userId !== song.user_id) {
+        return res.status(403).json({message: "You do not own this song"})
+    }
+    
+    try {
+        const deleteStatement = db.prepare(`DELETE FROM notes WHERE song_id = ? AND instrument = ?`).run(song_id, instrument)
+        notes.forEach((note)=> {
+            db.prepare(`INSERT INTO notes (song_id, instrument, octave, row,col) VALUES (?,?,?,?,?)`).run(song_id, instrument, note.octave, note.row, note.col)
+        })
+    
+        res.status(200).json({message: "notes successfully deleted and inserted"})
+    } catch (error) { 
+        res.status(500).json({message: "failed to delete or insert"})
+    }
+})
+
+app.get('/notes/:songId/:instrument', requireAuth, (req,res) => {
+    const {song_id} = req.params.id
+    const {instrument} = req.params.instrument
+    const song = db.prepare(`SELECT * FROM songs WHERE id = ?`).get(song_id)
+    if (!song) {
+        return res.status(404).json({message: "song not found"})
+    }
+    if (req.userId !== song.user_id) {
+        return res.status(403).json({message: "you do not own this song"})
+    }
+
+    try {
+        const statement = db.prepare(`SELECT * FROM notes WHERE song_id = ? AND instrument = ?`).all(song_id, instrument)
+        res.status(200).json({message:"Hello"})
+    } catch (error) {
+        res.status(500).json({message:"failed to get song notes"})
+    }
 })
 
 
