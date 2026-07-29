@@ -19,11 +19,12 @@ db.exec(`
         last_edited TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )`)
+// song id / user id, which song/user does this belong to
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    song_id TEXT NOT NULL,
+    song_id INTEGER NOT NULL,
     instrument TEXT NOT NULL,
     row INTEGER NOT NULL,
     column INTEGER NOT NULL,
@@ -32,9 +33,22 @@ db.exec(`
     UNIQUE (song_id, instrument, row, column, octave)
     )`)
 
+db. exec(`
+    CREATE TABLE IF NOT EXISTS drum_tracks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        FOREIGN KEY(song_id) references songs(id) 
+    )`) 
+
 db.exec(`
     CREATE TABLE IF NOT EXISTS drum (
-    id INTEGER PRIMARY KEY AUTOINCREMENT
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        drum_id INTEGER NOT NULL,
+        drum_type TEXT NOT NULL,
+        col INTEGER NOT NULL,
+        FOREIGN KEY(drum_id) references drum_tracks(id),
+        UNIQUE (drum_id, drum_type, col)
     )`)
 
 
