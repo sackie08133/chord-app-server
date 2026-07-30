@@ -33,13 +33,15 @@ db.exec(`
     UNIQUE (song_id, instrument, row, column, octave)
     )`)
 
-db. exec(`
-    CREATE TABLE IF NOT EXISTS drum_tracks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        song_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        FOREIGN KEY(song_id) references songs(id) 
-    )`) 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS drum_tracks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    song_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY(song_id) REFERENCES songs(id)
+  )
+`);
+
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS drum (
