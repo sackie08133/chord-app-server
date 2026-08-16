@@ -37,7 +37,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         track_id INTEGER NOT NULL,
-        row INTEGER NOT NULL,
+        row TEXT NOT NULL,
         col INTEGER NOT NULL,
         octave INTEGER NOT NULL,
         FOREIGN KEY(track_id) references guitar_tracks(id) ON DELETE CASCADE,
