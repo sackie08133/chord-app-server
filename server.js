@@ -14,6 +14,7 @@ app.listen(PORT, () => {
     console.log(`Server running on http:localhost:${PORT}`)
 })
 
+// make require authentication of token 
 function requireAuth(req, res, next) {
     const auth = req.headers.authorization
 
@@ -32,6 +33,7 @@ function requireAuth(req, res, next) {
     }
 }
 
+// check ownership using token of a song
 function getOwnedSong(song_id, req, res) {
     const song = db.prepare(`SELECT * FROM songs WHERE id = ?`).get(song_id)
     if (!song) {
@@ -46,45 +48,45 @@ function getOwnedSong(song_id, req, res) {
 }
 
 // signup
-app.post('/signup', async (req, res) => {
-    const {username, password} = req.body
-    const hashedPassword = await bcrypt.hash(password, 10)
+    app.post('/signup', async (req, res) => {
+        const {username, password} = req.body
+        const hashedPassword = await bcrypt.hash(password, 10)
 
-    try {
-        const statement = db.prepare(`INSERT INTO users (username, password) VALUES (?,?)`)
-        statement.run(username, hashedPassword)
-        res.status(201).json({message: 'User Created'})
-    } catch (error) {
-        if (error.code === `SQLITE_CONSTRAINT_UNIQUE`) {
-            res.status(400).json({message: 'Username is already taken'})
-        } else {
-            res.status(500).json({message: 'Error thrown'})
+        try {
+            const statement = db.prepare(`INSERT INTO users (username, password) VALUES (?,?)`)
+            statement.run(username, hashedPassword)
+            res.status(201).json({message: 'User Created'})
+        } catch (error) {
+            if (error.code === `SQLITE_CONSTRAINT_UNIQUE`) {
+                res.status(400).json({message: 'Username is already taken'})
+            } else {
+                res.status(500).json({message: 'Error thrown'})
+            }
         }
-    }
-})
+    })
 
 // login
-app.post('/login', async (req, res) => {
-    const {username, password} = req.body
-    const statement = db.prepare(`SELECT * FROM users WHERE username = ?`)
-    const user = statement.get(username)
+    app.post('/login', async (req, res) => {
+        const {username, password} = req.body
+        const statement = db.prepare(`SELECT * FROM users WHERE username = ?`)
+        const user = statement.get(username)
 
-    if (!user) {
-        res.status(400).json({message: 'username or password incorrect'})
-    } else {
-        const passwordMatches = await bcrypt.compare(password, user.password)
-        if (passwordMatches) {
-            const token = jwt.sign(
-                {id: user.id},
-                process.env.JWT_SECRET,
-                {expiresIn: '1h'}
-            )
-            res.json({token})
-        } else {
+        if (!user) {
             res.status(400).json({message: 'username or password incorrect'})
+        } else {
+            const passwordMatches = await bcrypt.compare(password, user.password)
+            if (passwordMatches) {
+                const token = jwt.sign(
+                    {id: user.id},
+                    process.env.JWT_SECRET,
+                    {expiresIn: '1h'}
+                )
+                res.json({token})
+            } else {
+                res.status(400).json({message: 'username or password incorrect'})
+            }
         }
-    }
-})
+    })
 
 // create new song
 app.post('/create', requireAuth, (req, res) => {
@@ -115,6 +117,7 @@ app.post('/delete', requireAuth, (req, res) => {
     }
 })
 
+// get all songs of a user
 app.get('/songs', requireAuth, (req, res) => {
     try {
         const songs = db.prepare(`SELECT * FROM songs WHERE user_id = ?`).all(req.userId)
@@ -140,6 +143,7 @@ app.put('/songs/:id', requireAuth, (req, res) => {
     }
 })
 
+// get a specific song based on id
 app.get('/songs/:id', requireAuth, (req, res) => {
     const songId = req.params.id
     const song = getOwnedSong(songId, req, res)
@@ -147,31 +151,57 @@ app.get('/songs/:id', requireAuth, (req, res) => {
     res.status(200).json(song)
 })
 
-app.post('/notes', requireAuth, (req, res) => {
-    // notes: [{octave, row, col}, {octave, row, col}]
-    const {song_id, instrument, notes} = req.body
-    const song = getOwnedSong(song_id, req, res)
-    if (!song) return
+// make a guitar track
+app.post('/guitar-tracks', requireAuth, (req, res) => {
+  const { song_id, track_name, guitar_notes, instrument} = req.body
+  const song = getOwnedSong(song_id, req, res)
+  if (!song) return
 
-    try {
-        db.prepare(`DELETE FROM notes WHERE song_id = ? AND instrument = ?`).run(song_id, instrument)
-        const insertStatement = db.prepare(`INSERT INTO notes (song_id, instrument, octave, row, col) VALUES (?,?,?,?,?)`)
-        notes.forEach((note) => {
-            insertStatement.run(song_id, instrument, note.octave, note.row, note.col)
-        })
-        res.status(200).json({message: "notes successfully deleted and inserted"})
-    } catch (error) {
-        res.status(500).json({message: "failed to delete or insert"})
-    }
-})
+  try {
+    const trackStatement = db.prepare(`INSERT INTO guitar_tracks (song_id, instrument, name) VALUES (?, ?, ?)`);
+    const result = trackStatement.run(song_id, instrument, track_name);
+    const newTrackId = result.lastInsertRowid;
 
-app.get('/notes/:songId/:instrument', requireAuth, (req, res) => {
-    const {songId, instrument} = req.params
+    const notesStatement = db.prepare(`INSERT INTO notes (track_id, row, col, octave) VALUES (?, ?, ?, ?)`);
+    guitar_notes.forEach((note) => {
+      notesStatement.run(newTrackId, note.row, note.col, note.octave);
+    });
+
+    res.status(200).json({ message: "Track Saved", track_id: newTrackId });
+  } catch (error) {
+    console.error("drum-tracks error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// get all guitar tracks from a song
+app.get('/guitar-tracks/:songId', requireAuth, (req, res) => {
+    const {songId} = req.params
     const song = getOwnedSong(songId, req, res)
     if (!song) return
 
     try {
-        const notes = db.prepare(`SELECT * FROM notes WHERE song_id = ? AND instrument = ?`).all(songId, instrument)
+        const tracks = db.prepare(`SELECT id, name FROM guitar_tracks WHERE song_id = ?`).all(songId)
+        res.status(200).json(tracks)
+    } catch (error) {
+        res.status(500).json({message: "failed to get guitar tracks"})
+    }
+})
+
+// get all notes from a guitar track
+app.get('/guitar-tracks/:trackId/notes', requireAuth, (req, res) => {
+    const {songId} = req.params
+    const song = getOwnedSong(songId, req, res)
+    if (!song) return
+
+    const {trackId} = req.params
+    const track = db.prepare(`SELECT * FROM guitar_tracks WHERE id = ?`).get(trackId)
+    if (!track) {
+        return res.status(404).json({message:"track not found"})
+    }
+
+    try {
+        const notes = db.prepare(`SELECT row, col, octave FROM notes WHERE track_id = ?`).all(trackId)
         res.status(200).json(notes)
     } catch (error) {
         res.status(500).json({message: "failed to get song notes"})
@@ -232,6 +262,7 @@ app.get('/drum-tracks/:trackId/hits', requireAuth, (req,res) => {
         res.status(500).json({message: "failed to get drum hits"})
     }
 })
+
 
 // const notes = db.prepare(`SELECT * FROM notes WHERE song_id = ? AND instrument = ?`).all(songId, instrument)
 // res.status(200).json(notes)

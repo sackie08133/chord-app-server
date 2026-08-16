@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3'
 const db = new Database('database.db')
 
-db.pragma(`journal_mode = WAL`)
+db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
+
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -17,31 +19,40 @@ db.exec(`
         title TEXT NOT NULL,
         bpm INTEGER NOT NULL,
         last_edited TEXT,
-        FOREIGN KEY(user_id) REFERENCES users(id)
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     )`)
 // song id / user id, which song/user does this belong to
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    song_id INTEGER NOT NULL,
-    instrument TEXT NOT NULL,
-    row INTEGER NOT NULL,
-    column INTEGER NOT NULL,
-    octave INTEGER NOT NULL,
-    FOREIGN KEY(song_id) references songs(id)
-    UNIQUE (song_id, instrument, row, column, octave)
-    )`)
+db.exec (`
+    CREATE TABLE IF NOT EXISTS guitar_tracks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        instrument TEXT NOT NULL,
+        song_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
+    )
+`)
 
 db.exec(`
+    CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        track_id INTEGER NOT NULL,
+        row INTEGER NOT NULL,
+        col INTEGER NOT NULL,
+        octave INTEGER NOT NULL,
+        FOREIGN KEY(track_id) references guitar_tracks(id) ON DELETE CASCADE,
+        UNIQUE (row, col)
+    )
+`)
+
+db.exec( `
   CREATE TABLE IF NOT EXISTS drum_tracks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     song_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     FOREIGN KEY(song_id) REFERENCES songs(id)
   )
-`);
-
+`)
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS drum (
@@ -49,9 +60,9 @@ db.exec(`
         drum_id INTEGER NOT NULL,
         drum_type TEXT NOT NULL,
         col INTEGER NOT NULL,
-        FOREIGN KEY(drum_id) references drum_tracks(id),
+        FOREIGN KEY(drum_id) references drum_tracks(track_id),
         UNIQUE (drum_id, drum_type, col)
-    )`)
-
+    )
+`)
 
 export default db
