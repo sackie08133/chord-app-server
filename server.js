@@ -79,7 +79,7 @@ function getOwnedSong(song_id, req, res) {
                 const token = jwt.sign(
                     {id: user.id},
                     process.env.JWT_SECRET,
-                    {expiresIn: '1h'}
+                    {expiresIn: '24h'}
                 )
                 res.json({token})
             } else {
@@ -158,21 +158,21 @@ app.post('/guitar-tracks', requireAuth, (req, res) => {
   if (!song) return
 
   try {
-    const trackStatement = db.prepare(`INSERT INTO guitar_tracks (song_id, instrument, name) VALUES (?, ?, ?)`);
-    const result = trackStatement.run(song_id, instrument, track_name);
-    const newTrackId = result.lastInsertRowid;
+    const trackStatement = db.prepare(`INSERT INTO guitar_tracks (song_id, instrument, name) VALUES (?, ?, ?)`)
+    const result = trackStatement.run(song_id, instrument, track_name)
+    const newTrackId = result.lastInsertRowid
 
-    const notesStatement = db.prepare(`INSERT INTO notes (track_id, row, col, octave) VALUES (?, ?, ?, ?)`);
+    const notesStatement = db.prepare(`INSERT INTO notes (track_id, row, col, octave) VALUES (?, ?, ?, ?)`)
     guitar_notes.forEach((note) => {
-      notesStatement.run(newTrackId, note.row, note.col, note.octave);
-    });
+      notesStatement.run(newTrackId, note.row, note.col, note.octave)
+    })
 
-    res.status(200).json({ message: "Track Saved", track_id: newTrackId });
+    res.status(200).json({ message: "Track Saved", track_id: newTrackId })
   } catch (error) {
     console.error("drum-tracks error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message })
   }
-});
+})
 
 // get all guitar tracks from a song
 app.get('/guitar-tracks/:songId', requireAuth, (req, res) => {
@@ -190,15 +190,14 @@ app.get('/guitar-tracks/:songId', requireAuth, (req, res) => {
 
 // get all notes from a guitar track
 app.get('/guitar-tracks/:trackId/notes', requireAuth, (req, res) => {
-    const {songId} = req.params
-    const song = getOwnedSong(songId, req, res)
-    if (!song) return
-
     const {trackId} = req.params
     const track = db.prepare(`SELECT * FROM guitar_tracks WHERE id = ?`).get(trackId)
-    if (!track) {
-        return res.status(404).json({message:"track not found"})
-    }
+    if (!track) {return res.status(404).json({message:"track not found"})}
+    
+    const songId = track.song_id
+    if (!songId) return
+    const song = getOwnedSong(songId, req, res)
+    if (!song) return
 
     try {
         const notes = db.prepare(`SELECT row, col, octave FROM notes WHERE track_id = ?`).all(trackId)
@@ -210,24 +209,24 @@ app.get('/guitar-tracks/:trackId/notes', requireAuth, (req, res) => {
 
 // make a drum track
 app.post('/drum-tracks', requireAuth, (req, res) => {
-  const { song_id, track_name, drum_hits } = req.body;
-  const song = getOwnedSong(song_id, req, res);
-  if (!song) return;
+  const { song_id, track_name, drum_hits } = req.body
+  const song = getOwnedSong(song_id, req, res)
+  if (!song) return
 
   try {
-    const trackStatement = db.prepare(`INSERT INTO drum_tracks (song_id, name) VALUES (?, ?)`);
-    const result = trackStatement.run(song_id, track_name);
-    const newTrackId = result.lastInsertRowid;
+    const trackStatement = db.prepare(`INSERT INTO drum_tracks (song_id, name) VALUES (?, ?)`)
+    const result = trackStatement.run(song_id, track_name)
+    const newTrackId = result.lastInsertRowid
 
-    const hitStatement = db.prepare(`INSERT INTO drum (drum_id, drum_type, col) VALUES (?, ?, ?)`);
+    const hitStatement = db.prepare(`INSERT INTO drum (drum_id, drum_type, col) VALUES (?, ?, ?)`)
     drum_hits.forEach((hit) => {
-      hitStatement.run(newTrackId, hit.drum_type, hit.col);
-    });
+      hitStatement.run(newTrackId, hit.drum_type, hit.col)
+    })
 
     res.status(200).json({ message: "Track Saved", track_id: newTrackId });
   } catch (error) {
-    console.error("drum-tracks error:", error);
-    res.status(500).json({ message: error.message });
+    console.error("drum-tracks error:", error)
+    res.status(500).json({ message: error.message })
   }
 });
 
@@ -260,6 +259,39 @@ app.get('/drum-tracks/:trackId/hits', requireAuth, (req,res) => {
         res.status(200).json(hitStatement)
     } catch(error) {
         res.status(500).json({message: "failed to get drum hits"})
+    }
+})
+
+app.post('/rhythm-guitar/:songId', requireAuth,  (req,res) => {
+    const {songId} = req.params
+    const song = getOwnedSong(songId, req, res)
+    if (!song) return
+
+    const {trackName, chordSlots, strumPattern} = req.body 
+
+    try {
+        const statement = db.prepare(`INSERT INTO rhythm_tracks (song_id, name, chord_slots, strum_pattern) VALUES (?,?,?,?)`)
+            .run(songId, trackName, JSON.stringify(chordSlots), JSON.stringify(strumPattern))
+        res.status(200).json(statement)
+    } catch(error) {
+        res.status(500).json({message: "failed to insert rhythm guitar track"})
+    }
+})
+
+app.get('/rhythm-guitar/:songId', requireAuth, (req,res) => {
+    const {songId} = req.params
+    const song = getOwnedSong(songId, req, res)
+    if (!song) return
+
+    try {
+        const track = db.prepare(`SELECT * FROM rhythm_tracks WHERE song_id = ?`).all(songId)
+        const parsed = track.map(t => ({
+            ...t,
+            chord_slots: JSON.parse(t.chord_slots),
+            strum_pattern: JSON.parse(t.strum_pattern)
+        }))
+    } catch (error) {
+        res.status(500).json({message: "failed to retrieve rhythm guitar tracks"})
     }
 })
 

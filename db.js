@@ -65,4 +65,15 @@ db.exec(`
     )
 `)
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS rhythm_tracks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        chord_slots TEXT NOT NULL,
+        strum_pattern TEXT NOT NULL,
+        FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
+    )
+`)
+
 export default db
