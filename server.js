@@ -290,6 +290,7 @@ app.get('/rhythm-guitar/:songId', requireAuth, (req,res) => {
             chord_slots: JSON.parse(t.chord_slots),
             strum_pattern: JSON.parse(t.strum_pattern)
         }))
+        res.status(200).json(parsed)
     } catch (error) {
         res.status(500).json({message: "failed to retrieve rhythm guitar tracks"})
     }
