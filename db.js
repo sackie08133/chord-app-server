@@ -1,16 +1,15 @@
-import Database from 'better-sqlite3'
-const db = new Database('database.db')
+import Database from "better-sqlite3";
+const db = new Database("database.db");
 
-db.pragma('journal_mode = WAL')
-db.pragma('foreign_keys = ON')
-
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL
-    )`)
+    )`);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS songs (
@@ -20,10 +19,10 @@ db.exec(`
         bpm INTEGER NOT NULL,
         last_edited TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`)
+    )`);
 // song id / user id, which song/user does this belong to
 
-db.exec (`
+db.exec(`
     CREATE TABLE IF NOT EXISTS guitar_tracks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         instrument TEXT NOT NULL,
@@ -31,7 +30,7 @@ db.exec (`
         name TEXT NOT NULL,
         FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
     )
-`)
+`);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS notes (
@@ -43,16 +42,16 @@ db.exec(`
         FOREIGN KEY(track_id) references guitar_tracks(id) ON DELETE CASCADE,
         UNIQUE (row, col)
     )
-`)
+`);
 
-db.exec( `
+db.exec(`
   CREATE TABLE IF NOT EXISTS drum_tracks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     song_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     FOREIGN KEY(song_id) REFERENCES songs(id)
   )
-`)
+`);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS drum (
@@ -63,7 +62,7 @@ db.exec(`
         FOREIGN KEY(drum_id) references drum_tracks(track_id),
         UNIQUE (drum_id, drum_type, col)
     )
-`)
+`);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS rhythm_tracks (
@@ -74,6 +73,18 @@ db.exec(`
         strum_pattern TEXT NOT NULL,
         FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
     )
+`);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS automation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER NOT NULL,
+        track_id INTEGER NOT NULL,
+        track_type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        col INTEGER NOT NULL,
+        FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
+    )
 `)
 
-export default db
+export default db;
