@@ -49,7 +49,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     song_id INTEGER NOT NULL,
     name TEXT NOT NULL,
-    FOREIGN KEY(song_id) REFERENCES songs(id)
+    FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
   )
 `);
 
@@ -59,7 +59,7 @@ db.exec(`
         drum_id INTEGER NOT NULL,
         drum_type TEXT NOT NULL,
         col INTEGER NOT NULL,
-        FOREIGN KEY(drum_id) references drum_tracks(track_id),
+        FOREIGN KEY(drum_id) references drum_tracks(track_id) ON DELETE CASCADE,
         UNIQUE (drum_id, drum_type, col)
     )
 `);

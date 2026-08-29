@@ -164,6 +164,24 @@ app.post('/guitar-tracks', requireAuth, (req, res) => {
   }
 })
 
+app.post('/delete/guitar-track', requireAuth, (req,res) => {
+    const trackToDelete = req.body.id
+    const track = db.prepare(`SELECT FROM guitar_tracks WHERE id = ?`).run(trackToDelete)
+    if (!track) {
+        return res.status(404).json({message: "Failed to fetch track to delete"})
+    }
+
+    const song = getOwnedSong(track.song_id, req,res)
+    if (!song) return
+
+    try {
+        db.prepare(`DELETE FROM guitar_tracks WHERE id = ?`).run(trackToDelete)
+        res.status(200).json({message: "Track Deleted Successfully"})
+    } catch (error) {
+        res.status(500).json({message: error.message})
+    }
+})
+
 app.get('/guitar-tracks/:songId', requireAuth, (req, res) => {
     const {songId} = req.params
     const song = getOwnedSong(songId, req, res)
@@ -230,6 +248,24 @@ app.get('/drum-tracks/:songId', requireAuth, (req, res) => {
     }
 })
 
+app.post(`/delete/drum-tracks`, requireAuth,(req,res) => {
+    const trackId = req.body
+    const track = db.prepare(`SELECT FROM drum_tracks WHERE id = ?`).run(trackId)
+    if (!track) {
+        return res.status(200).json({message: "Failed to find track to delete"})
+    }
+
+    const song = getOwnedSong(track.song_id, req, res)
+    if (!song) return
+
+    try {
+        const statement  = db.prepare(`DELETE FROM drum_tracks where id = ?`).run(trackId)
+        res.status(200).json({message: "Drum track successfully deleted"})
+    } catch (error) {
+        res.status(500).json({message: error.message})
+    }
+})
+
 app.get('/drum-tracks/:trackId/hits', requireAuth, (req,res) => { 
     const {trackId} = req.params
     const track = db.prepare(`SELECT * FROM drum_tracks WHERE id = ?`).get(trackId)
@@ -284,6 +320,24 @@ app.get('/rhythm-guitar/:songId', requireAuth, (req,res) => {
         res.status(500).json({message: "failed to retrieve rhythm guitar tracks"})
     }
 })
+
+app.post(`delete/rhythm-guitar`, requireAuth, (req,res) => {
+    const trackId = req.body
+    const track = db.prepare(`SELECT FROM rhythm_tracks WHERE id = ?`).run(trackId)
+    if (!track) {
+        return res.status(404).json({message: "Rhythm track not found, not deleted"})
+    }
+
+    const song = getOwnedSong(track.songId, (req,res))
+    if (!song) return 
+    
+    try {
+        const statement = db.prepare(`DELETE FROM rhythm_tracks WHERE id = ?`).run(trackId)
+        res.status(200).json({message: "Rhythm Track Successfully Deleted"})
+    } catch (error) {
+        res.status(500).json({message: error.message})
+    }
+}) 
 
 app.post(`/automation/:songId`, requireAuth, (req, res) => {
     const {songId} = req.params
