@@ -1,5 +1,4 @@
 import pg from "pg";
-import fs from "fs";
 import "dotenv/config";
 
 const { Pool } = pg;
