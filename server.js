@@ -12,10 +12,6 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json())
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`)
-})
-
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
 

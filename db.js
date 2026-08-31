@@ -1,21 +1,21 @@
-import pg from 'pg'
-import fs from 'fs'
-import 'dotenv/config'
+import pg from "pg";
+import fs from "fs";
+import "dotenv/config";
 
-const { Pool } = pg
+const { Pool } = pg;
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: true,
-        ca: fs.readFileSync('./ca.pem').toString()
-    }
-})
-
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+    
+  },
+});
 
 pool.on("error", (error) => {
   console.error("Unexpected PostgreSQL pool error:", error);
 });
+
 
 async function initializeDatabase() {
   await pool.query(`
