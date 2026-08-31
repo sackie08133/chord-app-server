@@ -1,16 +1,20 @@
-import express from "express";
-import cors from "cors";
-import db from "./db.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import "dotenv/config";
+import express from 'express'
+import cors from 'cors'
+import db from './db.js'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+import 'dotenv/config'
 
-const app = express();
+const app = express()
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001
 
-app.use(cors());
-app.use(express.json());
+app.use(cors())
+app.use(express.json())
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`)
+})
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
