@@ -1,4 +1,5 @@
 import pg from "pg";
+import fs from "fs";
 import "dotenv/config";
 
 const { Pool } = pg;
@@ -6,8 +7,8 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false,
-    
+    rejectUnauthorized: true,
+    ca: fs.readFileSync("./ca.pem", "utf8"),
   },
 });
 
