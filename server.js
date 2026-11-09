@@ -733,6 +733,55 @@ app.post("/automation/:songId", requireAuth, async (req, res) => {
   }
 });
 
+app.put("/automation/:songId", requireAuth, async (req, res) => {
+  const { songId } = req.params;
+  const { slots } = req.body ?? {};
+  const trackTypes = ["drum", "bass", "rhythm", "lead"];
+
+  if (!Array.isArray(slots) || slots.length > 16 || slots.some((slot) =>
+    !slot || !trackTypes.includes(slot.trackType)
+    || !Number.isInteger(slot.col) || slot.col < 0 || slot.col >= 4
+    || !Number.isInteger(slot.trackId) || slot.trackId < 1
+    || typeof slot.name !== "string"
+  ) || new Set(slots.map(({ trackType, col }) => trackType + "-" + col)).size !== slots.length) {
+    return res.status(400).json({ message: "Invalid arrangement" });
+  }
+
+  let client;
+  try {
+    const song = await getOwnedSong(songId, req, res);
+    if (!song) return;
+
+    client = await db.connect();
+    await client.query("BEGIN");
+    await client.query("SELECT id FROM songs WHERE id = $1 FOR UPDATE", [songId]);
+    await client.query("DELETE FROM automation WHERE song_id = $1", [songId]);
+    if (slots.length) {
+      await client.query(
+        `INSERT INTO automation (song_id, track_id, track_type, name, col)
+         SELECT $1, slot."trackId", slot."trackType", slot.name, slot.col
+         FROM jsonb_to_recordset($2::jsonb)
+           AS slot("trackId" integer, "trackType" text, name text, col integer)`,
+        [songId, JSON.stringify(slots)],
+      );
+    }
+    await client.query("COMMIT");
+    res.json({ saved: true });
+  } catch (error) {
+    if (client) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("Automation rollback error:", rollbackError);
+      }
+    }
+    console.error("Save automation error:", error);
+    res.status(500).json({ message: "Failed to save automation" });
+  } finally {
+    client?.release();
+  }
+});
+
 app.get("/automation/:songId", requireAuth, async (req, res) => {
   const { songId } = req.params;
 
